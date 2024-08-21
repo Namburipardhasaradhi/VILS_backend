@@ -61,10 +61,10 @@ class EmailSchema(BaseModel):
 # Dependency for getting a database connection
 async def get_db():
     conn = await aiomysql.connect(
-        host="localhost",
-        user="root",
-        password="",  # Add your MySQL root password here
-        db="vils"
+        host="bt3q16i8dgq1qu9ljnbr-mysql.services.clever-cloud.com",
+        user="ulbtkvh95jjci6qb",
+        password="9CGsx7OFUtzWCbqPUfAV",  # Add your MySQL root password here
+        db="bt3q16i8dgq1qu9ljnbr"
     )
     try:
         yield conn

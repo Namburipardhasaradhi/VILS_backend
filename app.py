@@ -21,7 +21,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Rename the email-sending function to avoid conflict
+# Email-sending function
 def send_email_via_smtp(body: str, recipient: str):
     subject = 'Mail from video'
     em = EmailMessage()
@@ -31,7 +31,6 @@ def send_email_via_smtp(body: str, recipient: str):
     em.set_content(body, subtype="html")
     context = ssl.create_default_context()
 
-    # Log in and send the email
     with smtplib.SMTP_SSL('smtp.gmail.com', 465, context=context) as smtp:
         smtp.login(email_sender, email_password)
         smtp.sendmail(email_sender, recipient, em.as_string())
@@ -58,18 +57,36 @@ class EmailSchema(BaseModel):
     recipient: str
     body: str
 
-# Dependency for getting a database connection
-async def get_db():
-    conn = await aiomysql.connect(
+# Create a global variable for the connection pool
+pool: Optional[aiomysql.Pool] = None
+
+# Startup event to initialize the connection pool
+@app.on_event("startup")
+async def startup_event():
+    global pool
+    pool = await aiomysql.create_pool(
         host="bt3q16i8dgq1qu9ljnbr-mysql.services.clever-cloud.com",
         user="ulbtkvh95jjci6qb",
-        password="9CGsx7OFUtzWCbqPUfAV",  # Add your MySQL root password here
-        db="bt3q16i8dgq1qu9ljnbr"
+        password="9CGsx7OFUtzWCbqPUfAV",
+        db="bt3q16i8dgq1qu9ljnbr",
+        minsize=1,
+        maxsize=10
     )
-    try:
-        yield conn
-    finally:
-        conn.close()
+
+# Shutdown event to close the connection pool
+@app.on_event("shutdown")
+async def shutdown_event():
+    global pool
+    pool.close()
+    await pool.wait_closed()
+
+# Dependency for getting a database connection from the pool
+async def get_db():
+    async with pool.acquire() as conn:
+        try:
+            yield conn
+        finally:
+            conn.close()
 
 # Create operation for user
 @app.post("/users/", response_model=User)
@@ -125,7 +142,7 @@ async def create_contact(contact: Contact, db: aiomysql.Connection = Depends(get
             (
                 contact.user_id,
                 contact.name,
-                contact.contact_no,
+                contact_no,
                 contact.email
             )
         )

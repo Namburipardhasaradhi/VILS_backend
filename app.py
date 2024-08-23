@@ -22,17 +22,12 @@ app.add_middleware(
 )
 
 # Email-sending function
-def send_email_via_smtp(body: str, recipient: str, screen_recording_link: Optional[str] = None):
+def send_email_via_smtp(body: str, recipient: str):
     subject = 'Mail from video'
     em = EmailMessage()
     em['From'] = email_sender
     em['To'] = recipient
     em['Subject'] = subject
-    
-    # Append screen recording link if available
-    if screen_recording_link:
-        body += f"\n\nYou can view the screen recording here: {screen_recording_link}"
-    
     em.set_content(body, subtype="html")
     context = ssl.create_default_context()
 
@@ -58,11 +53,9 @@ class Contact(BaseModel):
     email: str
     id: Optional[int] = None
 
-# Pydantic model for email with optional screen recording link
 class EmailSchema(BaseModel):
     recipient: str
     body: str
-    screen_recording_link: Optional[str] = None
 
 # Create a global variable for the connection pool
 pool: Optional[aiomysql.Pool] = None
@@ -149,7 +142,7 @@ async def create_contact(contact: Contact, db: aiomysql.Connection = Depends(get
             (
                 contact.user_id,
                 contact.name,
-                contact.contact_no,
+                contact_no,
                 contact.email
             )
         )
@@ -217,5 +210,5 @@ async def delete_contact(contact_id: int, user_id: int, db: aiomysql.Connection 
 # Email sending endpoint
 @app.post("/send-email/")
 async def send_email(email_data: EmailSchema):
-    send_email_via_smtp(email_data.body, email_data.recipient, email_data.screen_recording_link)
+    send_email_via_smtp(email_data.body, email_data.recipient)
     return {"message": "Email sent successfully"}

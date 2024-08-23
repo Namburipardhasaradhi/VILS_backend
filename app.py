@@ -212,3 +212,4 @@ async def delete_contact(contact_id: int, user_id: int, db: aiomysql.Connection 
 async def send_email(email_data: EmailSchema):
     send_email_via_smtp(email_data.body, email_data.recipient)
     return {"message": "Email sent successfully"}
+

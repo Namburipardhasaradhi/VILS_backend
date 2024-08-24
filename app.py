@@ -7,12 +7,11 @@ from email.message import EmailMessage
 import smtplib
 import ssl
 
-email_sender = 'namburipardhu2103@gmail.com'
-email_password = 'vzpo lggc nkeo wmvq'
+email_sender = 'vilsvcteam@gmail.com'
+email_password = 'jiwb iklg yuyt puwm'
 
 app = FastAPI()
 
-# Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -21,9 +20,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Email-sending function
 def send_email_via_smtp(body: str, recipient: str):
-    subject = 'Mail from video'
+    subject = 'Mail from vilsvc'
     em = EmailMessage()
     em['From'] = email_sender
     em['To'] = recipient
@@ -35,7 +33,6 @@ def send_email_via_smtp(body: str, recipient: str):
         smtp.login(email_sender, email_password)
         smtp.sendmail(email_sender, recipient, em.as_string())
 
-# Pydantic model for user
 class User(BaseModel):
     first_name: str
     last_name: str
@@ -45,7 +42,6 @@ class User(BaseModel):
     password: str
     id: Optional[int] = None
 
-# Pydantic model for contacts
 class Contact(BaseModel):
     user_id: int
     name: str
@@ -57,10 +53,8 @@ class EmailSchema(BaseModel):
     recipient: str
     body: str
 
-# Create a global variable for the connection pool
 pool: Optional[aiomysql.Pool] = None
 
-# Startup event to initialize the connection pool
 @app.on_event("startup")
 async def startup_event():
     global pool
@@ -73,14 +67,12 @@ async def startup_event():
         maxsize=10
     )
 
-# Shutdown event to close the connection pool
 @app.on_event("shutdown")
 async def shutdown_event():
     global pool
     pool.close()
     await pool.wait_closed()
 
-# Dependency for getting a database connection from the pool
 async def get_db():
     async with pool.acquire() as conn:
         try:
@@ -88,7 +80,6 @@ async def get_db():
         finally:
             conn.close()
 
-# Create operation for user
 @app.post("/users/", response_model=User)
 async def create_user(user: User, db: aiomysql.Connection = Depends(get_db)):
     async with db.cursor() as cur:
@@ -109,7 +100,6 @@ async def create_user(user: User, db: aiomysql.Connection = Depends(get_db)):
         user.id = cur.lastrowid
     return user
 
-# Read operation for user
 @app.get("/users/", response_model=User)
 async def read_user(email: str, password: str, db: aiomysql.Connection = Depends(get_db)):
     async with db.cursor() as cursor:
@@ -132,7 +122,6 @@ async def read_user(email: str, password: str, db: aiomysql.Connection = Depends
         )
         return user
 
-# Create a contact
 @app.post("/contacts/", response_model=Contact)
 async def create_contact(contact: Contact, db: aiomysql.Connection = Depends(get_db)):
     async with db.cursor() as cur:
@@ -142,7 +131,7 @@ async def create_contact(contact: Contact, db: aiomysql.Connection = Depends(get
             (
                 contact.user_id,
                 contact.name,
-                contact_no,
+                contact.contact_no,
                 contact.email
             )
         )
@@ -150,7 +139,6 @@ async def create_contact(contact: Contact, db: aiomysql.Connection = Depends(get
         contact.id = cur.lastrowid
     return contact
 
-# Retrieve contacts for a specific user
 @app.get("/contacts/{user_id}", response_model=List[Contact])
 async def get_contacts(user_id: int, db: aiomysql.Connection = Depends(get_db)):
     async with db.cursor() as cur:
@@ -172,7 +160,6 @@ async def get_contacts(user_id: int, db: aiomysql.Connection = Depends(get_db)):
         
         return contacts
 
-# Update a contact
 @app.post("/contacts/{contact_id}", response_model=Contact)
 async def update_contact(contact_id: int, updated_contact: Contact, db: aiomysql.Connection = Depends(get_db)):
     async with db.cursor() as cur:
@@ -193,7 +180,6 @@ async def update_contact(contact_id: int, updated_contact: Contact, db: aiomysql
         
         return updated_contact
 
-# Delete a contact
 @app.delete("/contacts/{contact_id}", response_model=dict)
 async def delete_contact(contact_id: int, user_id: int, db: aiomysql.Connection = Depends(get_db)):
     async with db.cursor() as cur:
@@ -207,7 +193,6 @@ async def delete_contact(contact_id: int, user_id: int, db: aiomysql.Connection 
         
         return {"message": "Contact deleted successfully"}
 
-# Email sending endpoint
 @app.post("/send-email/")
 async def send_email(email_data: EmailSchema):
     send_email_via_smtp(email_data.body, email_data.recipient)
